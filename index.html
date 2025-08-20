@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alerta de Segurança — Brincadeira Segura</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    body { margin:0; background:#0b1220; color:#e7eef8; display:flex; min-height:100vh; align-items:center; justify-content:center; }
+    .card { width: min(640px, 92vw); background:#111a2e; border:1px solid #1e2a44; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .row { display:flex; gap:16px; align-items:center; }
+    .badge { font-size:12px; background:#2a3657; padding:6px 10px; border-radius:999px; border:1px solid #3b4c78; letter-spacing:.3px; }
+    h1 { margin:.6rem 0 0.2rem; font-size:1.4rem; }
+    p { opacity:.95; line-height:1.55; }
+    .scan { margin:18px 0; height:10px; background:#0c1731; border:1px solid #1d2b4b; border-radius:999px; overflow:hidden; position:relative;}
+    .scan::after { content:""; position:absolute; inset:0; width:35%; animation: move 1.2s linear infinite; background:linear-gradient(90deg, transparent, #4ea1ff55, transparent); }
+    @keyframes move { from { left:-35%; } to { left:100%; } }
+    .hidden { display:none; }
+    .ok { background:#0f2a16; border:1px solid #1f5a33; padding:12px 14px; border-radius:12px; margin-top:12px; }
+    .tips { margin-top:16px; background:#0d1526; border:1px dashed #31416b; padding:16px; border-radius:12px; }
+    .btn { display:inline-block; margin-top:14px; padding:10px 14px; border-radius:10px; border:1px solid #385aa8; text-decoration:none; color:#e7eef8;}
+    .center { text-align:center; }
+    .timer { margin-top:6px; font-size:.95rem; opacity:.9; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <span class="badge">ALERTA</span>
+      <span class="badge">Verificação de Segurança</span>
+    </div>
+    <h1>Verificando atividade incomum…</h1>
+    <p>Por favor, aguarde enquanto analisamos este dispositivo.</p>
+    <div class="scan" aria-hidden="true"></div>
+    <p class="timer">Tempo restante: <strong id="count">60</strong>s</p>
+
+    <div id="reveal" class="hidden">
+      <div class="ok">
+        <strong>Calma! 😅 É só uma brincadeira educativa.</strong><br>
+        Nada foi instalado, nada foi invadido e nenhum dado foi coletado.
+      </div>
+      <div class="tips">
+        <p><strong>Aprenda algo útil:</strong></p>
+        <ul>
+          <li>Não clique em links estranhos ou que causem medo/pressa.</li>
+          <li>Confira o remetente do email e o domínio do link antes de abrir.</li>
+          <li>Ative 2FA e mantenha o sistema/antivírus atualizados.</li>
+        </ul>
+      </div>
+      <p class="center"><a class="btn" href="#" onclick="history.back()">Voltar</a></p>
+    </div>
+  </div>
+
+  <script>
+    // 60 segundos
+    const totalMs = 60000;
+    const revealEl = document.getElementById('reveal');
+    const countEl = document.getElementById('count');
+    let remaining = 60;
+
+    // Contagem regressiva visível
+    const interval = setInterval(() => {
+      remaining--;
+      countEl.textContent = remaining;
+      if (remaining <= 0) clearInterval(interval);
+    }, 1000);
+
+    // Revela mensagem segura após 1 minuto
+    setTimeout(() => {
+      revealEl.classList.remove('hidden');
+    }, totalMs);
+  </script>
+</body>
+</html>
