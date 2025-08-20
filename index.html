@@ -6,8 +6,8 @@
   <title>SISTEMA COMPROMETIDO</title>
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-    body { margin:0; background:#0b1220; color:#e7eef8; display:flex; min-height:100vh; align-items:center; justify-content:center; }
-    .card { width: min(640px, 92vw); background:#111a2e; border:1px solid #1e2a44; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    body { margin:0; background:#000; color:#e7eef8; display:flex; min-height:100vh; align-items:center; justify-content:center; }
+    .card { position: relative; width: min(640px, 92vw); background:#111a2e; border:1px solid #1e2a44; border-radius:16px; padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,.35); overflow: hidden; }
     .row { display:flex; gap:16px; align-items:center; }
     .badge { font-size:12px; background:#4d1a1a; padding:6px 10px; border-radius:999px; border:1px solid #8d2d2d; letter-spacing:.3px; font-weight:bold; }
     h1 { margin:.6rem 0 0.2rem; font-size:1.4rem; color:#ff5555; }
@@ -20,54 +20,187 @@
     .tips { margin-top:16px; background:#0d1526; border:1px dashed #31416b; padding:16px; border-radius:12px; }
     .btn { display:inline-block; margin-top:14px; padding:10px 14px; border-radius:10px; border:1px solid #385aa8; text-decoration:none; color:#e7eef8;}
     .center { text-align:center; }
-    .timer { margin-top:6px; font-size:.95rem; opacity:.9; }
+    .timer { margin-top:6px; font-size:.95rem; opacity:.9; }    
+    #log-console {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      height: 120px;
+      overflow-y: scroll;
+      padding: 8px;
+      font-family: monospace;
+      margin-top: 16px;
+      border-radius: 8px;
+    }
+    #trash-icon {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      fill: #ff5555;
+      opacity: 0.7;
+      z-index: 5;
+    }
+    .flying-file {
+      position: absolute;
+      top: 50%;
+      width: 28px;
+      height: 36px;
+      background: #ccc;
+      border: 1px solid #888;
+      border-radius: 3px;
+      animation: fly-to-trash 1.2s ease-in forwards;
+    }
+    @keyframes fly-to-trash {
+      from { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      to { transform: translate(220px, 180px) rotate(360deg) scale(0.2); opacity: 0; }
+    }
+    #matrix-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+    .shutdown-overlay { position:fixed; inset:0; background:#000; z-index:999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#444; font-family:monospace; }
+    .shutdown-overlay h2 { font-size:1.5rem; color:#555; margin:0; }
+    .shutdown-overlay p { font-size:1rem; color:#333; }
   </style>
 </head>
 <body>
+  <canvas id="matrix-bg"></canvas>
+
   <div class="card">
-    <div class="row">
-      <span class="badge">PERIGO</span>
-      <span class="badge">INVASÃO DETECTADA</span>
+    <div id="attack-view">
+      <div class="row">
+        <span class="badge">PERIGO</span>
+        <span class="badge">INVASÃO DETECTADA</span>
+      </div>
+      <h1>Seus arquivos estão sendo apagados!</h1>
+      <p>Não desligue ou reinicie este dispositivo. Qualquer tentativa de interrupção resultará na explosão do seu celular!.</p>
+      <div class="scan" aria-hidden="true"></div>
+      <p class="timer">Tempo restante para apagar totalmente: <strong id="count">60</strong>s</p>
+      <div id="log-console"></div>
+      <svg id="trash-icon" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
     </div>
-    <h1>Seus arquivos estão sendo criptografados!</h1>
-    <p>Não desligue ou reinicie este dispositivo. Qualquer tentativa de interrupção resultará na exclusão permanente de todos os seus dados.</p>
-    <div class="scan" aria-hidden="true"></div>
-    <p class="timer">Tempo restante para bloqueio total: <strong id="count">60</strong>s</p>
 
     <div id="reveal" class="hidden">
       <div class="ok">
-        <strong>Ufa! 😅 Seus arquivos estão seguros. Isto é apenas uma brincadeira educativa.</strong><br>
-        Nenhum arquivo foi criptografado, nada foi invadido e nenhum dado foi coletado.
+        <strong>Calma, seu telemóvel não vai explodir! 😅</strong><br>
+        Isto é apenas uma brincadeira para alertar sobre segurança digital. Seus arquivos e seu dispositivo estão perfeitamente seguros.
       </div>
       <div class="tips">
-        <p><strong>Como se proteger de verdade:</strong></p>
+        <p><strong>Mas o perigo na internet é real. Como se proteger:</strong></p>
         <ul>
           <li>Não clique em links estranhos ou que causem medo/pressa.</li>
           <li>Confira o remetente do email e o domínio do link antes de abrir.</li>
           <li>Ative 2FA e mantenha o sistema/antivírus atualizados.</li>
         </ul>
       </div>
-      <p class="center"><a class="btn" href="#" onclick="history.back()">Voltar</a></p>
     </div>
   </div>
 
+  <div id="shutdown-overlay" class="hidden">
+    <h2>APAGANDO...</h2>
+    <p id="shutdown-msg"></p>
+  </div>
+  
   <script>
+    // --- Efeito Matrix ---
+    const canvas = document.getElementById('matrix-bg');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const binary = "01";
+    const characters = binary.split('');
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+
+    for (let x = 0; x < columns; x++) {
+      drops[x] = 1;
+    }
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0F0'; // Cor verde clássica
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = characters[Math.floor(Math.random() * characters.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    setInterval(drawMatrix, 40);
+    // --- Fim do Efeito Matrix ---
+
+
     // 60 segundos
     const totalMs = 60000;
+    const attackViewEl = document.getElementById('attack-view');
     const revealEl = document.getElementById('reveal');
     const countEl = document.getElementById('count');
+    const cardEl = document.querySelector('.card');
+    const logConsoleEl = document.getElementById('log-console');
+    const shutdownOverlayEl = document.getElementById('shutdown-overlay');
     let remaining = 60;
+ 
+    // --- Simulação de Cópia de Dados ---
+    const fakeFiles = [
+      'DCIM/Camera/IMG_20240521.jpg', 'WhatsApp/Media/WA_VIDEO_001.mp4', 'Downloads/documento.pdf',
+      'Android/data/com.instagram.android/cache', 'Music/track01.mp3', 'Contacts/backup.vcf',
+      'Pictures/Screenshots/screenshot_1.png', 'system/app/Chrome.apk', 'Alarms/alarm.ogg'
+    ];
+    const actions = ['DELETING', 'COPYING', 'ENCRYPTING', 'COMPRESSING'];
+
+    const logInterval = setInterval(() => {
+      const action = actions[Math.floor(Math.random() * actions.length)];
+      const file = fakeFiles[Math.floor(Math.random() * fakeFiles.length)];
+      const logEntry = document.createElement('p');
+      logEntry.style.margin = '2px 0';
+      logEntry.textContent = `> ${action}... /storage/emulated/0/${file}`;
+      logEntry.style.color = action === 'DELETING' || action === 'ENCRYPTING' ? '#ff5555' : '#00dd00';
+      logConsoleEl.appendChild(logEntry);
+      logConsoleEl.scrollTop = logConsoleEl.scrollHeight;
+
+      // --- Visual Deletion Animation ---
+      if (action === 'DELETING') {
+        const fileEl = document.createElement('div');
+        fileEl.className = 'flying-file';
+        // Start animation from a random horizontal position for variety
+        fileEl.style.left = `${20 + Math.random() * 50}%`;
+        cardEl.appendChild(fileEl);
+
+        // Remove the element after animation to prevent clutter
+        fileEl.addEventListener('animationend', () => { fileEl.remove(); });
+      }
+    }, 400);
+    // --- Fim da Simulação ---
 
     // Contagem regressiva visível
     const interval = setInterval(() => {
       remaining--;
       countEl.textContent = remaining;
-      if (remaining <= 0) clearInterval(interval);
+      if (remaining <= 0) {
+        clearInterval(interval);
+      }
     }, 1000);
-
-    // Revela mensagem segura após 1 minuto
+ 
+    // 1. Simula o desligamento após 1 minuto
     setTimeout(() => {
-      revealEl.classList.remove('hidden');
+      clearInterval(logInterval); // Para a simulação de cópia para evitar erros
+      cardEl.classList.add('hidden');
+      shutdownOverlayEl.classList.remove('hidden');
+
+      // 2. Após o susto, revela a mensagem educativa
+      setTimeout(() => {
+        shutdownOverlayEl.classList.add('hidden');
+        attackViewEl.classList.add('hidden');
+        revealEl.classList.remove('hidden');
+        cardEl.classList.remove('hidden');
+      }, 4000);
     }, totalMs);
   </script>
 </body>
